@@ -14,6 +14,7 @@ from .operations import NAMES, invoke
 from .protocol import ERROR_CODE, TIMEOUT, pack_frame, receive_frame
 
 LOGGER = logging.getLogger("practice23.rpc")
+SINGLE_ARGUMENT = 1
 
 
 class RpcServer(ThreadingTCPServer):
@@ -40,13 +41,25 @@ class Handler(BaseRequestHandler):
             LOGGER.info("REQUEST code=%s xml=%r", code, body)
             if code not in NAMES:
                 raise ValueError("Неизвестный код операции")
-            result = invoke(self.server.store, NAMES[code], decode(body))
+            result = self._dispatch(code, decode(body))
             payload = ["ok", result]
         except (ValueError, TypeError, OSError) as error:
             LOGGER.info("REQUEST_ERROR code=%s error=%s", code, error)
             payload = ["error", str(error)]
         reply_code = code if code in NAMES else ERROR_CODE
         self._send(reply_code, payload)
+
+    def _dispatch(self, code, args):
+        """Проверить размер ответа создания до изменения хранилища.
+
+        create возвращает копию входной записи. Поэтому её точный размер
+        известен заранее: отказ транспорта не должен скрывать вставку.
+        """
+        name = NAMES[code]
+        if name.startswith("create_") and type(args) is list:
+            if len(args) == SINGLE_ARGUMENT:
+                pack_frame(code, encode(["ok", args[0]]), reply=True)
+        return invoke(self.server.store, name, args)
 
     def _send(self, code, payload):
         """Отправить ответ или ошибку превышения размера."""

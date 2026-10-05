@@ -34,7 +34,8 @@ def main():
     parser.add_argument("--port", type=int, default=8023)
     args = parser.parse_args()
     logging.basicConfig(
-        level=logging.INFO, stream=sys.stdout, format="%(levelname)s %(message)s",
+        level=logging.INFO, stream=sys.stdout,
+        format="%(levelname)s %(message)s",
     )
     if args.mode == "model":
         run_repl(Store())

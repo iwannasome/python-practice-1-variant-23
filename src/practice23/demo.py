@@ -7,7 +7,7 @@ from .operations import invoke
 
 
 def demo_commands(now=None):
-    """Сформировать независимые учебные записи относительно текущего времени."""
+    """Сформировать учебные записи относительно текущего времени."""
     now = int(time()) if now is None else now
     return [
         ("create_member", [[1, now, "127.0.0.1", "ru-RU"]]),
