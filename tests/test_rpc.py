@@ -9,6 +9,9 @@ from practice23.client import RpcClient, RpcError
 from practice23.codec import decode, encode
 from practice23.protocol import pack_frame, receive_frame
 
+EXPECTED_ERROR_CODE = 0
+EXPECTED_UNIQUE_MEMBERS = 1
+
 
 def test_all_ten_methods(rpc_server):
     """Проверить создание, чтение трёх сущностей и выборку."""
@@ -37,7 +40,7 @@ def test_unknown_operation_and_server_survival(rpc_server):
     with socket.create_connection(rpc_server.server_address) as sock:
         sock.sendall(pack_frame(65535, encode([])))
         code, body = receive_frame(sock, reply=True)
-        assert code == 0
+        assert code == EXPECTED_ERROR_CODE
         assert decode(body)[0] == "error"
     assert RpcClient(*rpc_server.server_address).list_members() == []
 
@@ -57,4 +60,4 @@ def test_concurrent_duplicate_is_atomic(rpc_server):
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(lambda _: create(), range(2)))
     assert sorted(outcomes) == ["error", "ok"]
-    assert len(client.list_members()) == 1
+    assert len(client.list_members()) == EXPECTED_UNIQUE_MEMBERS

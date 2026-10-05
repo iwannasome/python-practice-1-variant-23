@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+NO_MISSING = 0
+
 METHODS = (
     "create_member",
     "list_members",
@@ -48,8 +50,8 @@ def main():
         check_file(filename, report["files"][filename])
     for name in ("model", "schema"):
         summary = report["files"][f"src/practice23/{name}.py"]["summary"]
-        assert summary["missing_lines"] == 0, name
-        assert summary["missing_branches"] == 0, name
+        assert summary["missing_lines"] == NO_MISSING, name
+        assert summary["missing_branches"] == NO_MISSING, name
     print("PASS: 10/10 методов модели и клиента; model/schema 100% ветвей")
 
 

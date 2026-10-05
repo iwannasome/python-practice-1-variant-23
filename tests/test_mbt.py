@@ -25,6 +25,7 @@ TEXT = st.text(max_size=15)
 UIDS = st.integers(min_value=1, max_value=8)
 DELTAS = st.sampled_from([-600, -541, -540, -539, -1, 0, 1, 60])
 PLURALS = {"member": "members", "task": "tasks", "response": "responses"}
+MINIMUM_DURATION = 0
 
 
 class RpcMachine(RuleBasedStateMachine):
@@ -111,7 +112,9 @@ class RpcMachine(RuleBasedStateMachine):
     def add_response(self, uid, parent, delta, duration):
         """Проверить времена ответа и неотрицательность duration."""
         row = [uid, self.now + delta, "<&>", "ok", "", parent, duration]
-        valid = parent in self.expected["task"] and duration >= 0
+        valid = (
+            parent in self.expected["task"] and duration >= MINIMUM_DURATION
+        )
         self.create("response", row, valid)
 
     @rule(entity=st.sampled_from(tuple(PLURALS)), uid=UIDS)

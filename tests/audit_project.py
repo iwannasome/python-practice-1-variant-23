@@ -11,6 +11,13 @@ MAX_FUNCTION_LINES = 40
 MAX_ARGUMENTS = 7
 
 
+def is_number_literal(node):
+    """Распознать числовой литерал, включая значение со знаком."""
+    if isinstance(node, ast.UnaryOp):
+        return is_number_literal(node.operand)
+    return isinstance(node, ast.Constant) and type(node.value) in (int, float)
+
+
 def audit_file(path):
     """Проверить размер файла, ширину, функции и отсутствие #
     комментариев.
@@ -22,6 +29,13 @@ def audit_file(path):
     tokens = tokenize.generate_tokens(io.StringIO(text).readline)
     assert not any(token.type == tokenize.COMMENT for token in tokens), path
     for node in ast.walk(ast.parse(text)):
+        if isinstance(node, ast.Compare):
+            operands = [node.left, *node.comparators]
+            assert not any(map(is_number_literal, operands)), (
+                path,
+                node.lineno,
+                "Числовой литерал в сравнении",
+            )
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             length = node.end_lineno - node.lineno + 1
             assert length <= MAX_FUNCTION_LINES, (path, node.name, length)
@@ -42,6 +56,7 @@ def main():
         audit_file(path)
     print(f"PASS: {len(files)} файлов; строки <=79; функции <=40;")
     print("аргументы <=7; обычных комментариев нет; файлы <=1000 строк")
+    print("PASS: нет числовых литералов в операндах сравнений")
 
 
 if __name__ == "__main__":
