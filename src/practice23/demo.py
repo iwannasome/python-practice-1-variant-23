@@ -31,7 +31,7 @@ def demo_commands(now=None):
 def demonstrate(target):
     """Напечатать вызовы, фактические результаты и ожидаемые ошибки."""
     for name, args in demo_commands():
-        print(f"> {name}({json.dumps(args, ensure_ascii=False)})")
+        print(f"> {name} args={json.dumps(args, ensure_ascii=False)}")
         try:
             result = invoke(target, name, args)
             print(json.dumps(result, ensure_ascii=False))
