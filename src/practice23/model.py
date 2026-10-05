@@ -1,18 +1,27 @@
 """Слой данных в оперативной памяти и десять операций варианта 23.
 
 Каждая запись — обычный list. Словарь служит индексом по uid и не меняет
-требуемое представление записи. RLock делает проверку и вставку атомарными.
-На входе и выходе создаются копии списков, чтобы вызывающий код не мог
-испортить хранилище в обход проверки. Все поля скалярные: shallow copy
-достаточно. Данные не записываются на диск.
+требуемое представление записи. RLock делает проверку и вставку
+атомарными. На входе и выходе создаются копии списков, чтобы вызывающий
+код не мог испортить хранилище в обход проверки. Все поля скалярные:
+shallow copy достаточно. Данные не записываются на диск.
 """
 
 from threading import RLock
 from time import time
 
 from .schema import (
-    MEMBER_IP, REFERENCES, RESPONSE_DURATION, RESPONSE_TASK, RESPONSE_TIME,
-    SCHEMAS, TASK_MEMBER, TASK_TAGS, UID, WINDOW_SECONDS, validate_row,
+    MEMBER_IP,
+    REFERENCES,
+    RESPONSE_DURATION,
+    RESPONSE_TASK,
+    RESPONSE_TIME,
+    SCHEMAS,
+    TASK_MEMBER,
+    TASK_TAGS,
+    UID,
+    WINDOW_SECONDS,
+    validate_row,
     validate_uid,
 )
 
@@ -41,13 +50,17 @@ class Store:
             return row.copy()
 
     def _list(self, entity):
-        """Вернуть копии в порядке uid для стабильного отображения и тестов."""
+        """Вернуть копии в порядке uid для стабильного отображения и
+        тестов.
+        """
         with self._lock:
             table = self._tables[entity]
             return [table[uid].copy() for uid in sorted(table)]
 
     def _get(self, entity, uid):
-        """Вернуть копию записи; отсутствие ключа является явной ошибкой."""
+        """Вернуть копию записи; отсутствие ключа является явной
+        ошибкой.
+        """
         validate_uid(uid)
         with self._lock:
             if uid not in self._tables[entity]:
@@ -59,7 +72,9 @@ class Store:
         return self._create("member", row)
 
     def list_members(self):
-        """Прочитать все Member, не раскрывая изменяемые внутренние списки."""
+        """Прочитать все Member, не раскрывая изменяемые внутренние
+        списки.
+        """
         return self._list("member")
 
     def get_member(self, uid):
@@ -69,8 +84,9 @@ class Store:
     def create_task(self, row):
         """Создать Task из семи полей в порядке схемы.
 
-        member должен ссылаться на существующий Member. completed и launched
-        сохраняются как int, поскольку именно такой тип указан на диаграмме.
+        member должен ссылаться на существующий Member. completed и
+        launched сохраняются как int, поскольку именно такой тип указан
+        на диаграмме.
         """
         return self._create("task", row)
 
@@ -79,12 +95,13 @@ class Store:
         return self._list("task")
 
     def get_task(self, uid):
-        """Прочитать задачу по ключу; вернуть ValueError при отсутствии."""
+        """Прочитать задачу или вызвать ValueError."""
         return self._get("task", uid)
 
     def create_response(self, row):
-        """Создать Response с полями uid, datetime, response, status, failure,
-        task, duration. task должен существовать; duration неотрицательна.
+        """Создать Response с полями uid, datetime, response, status,
+        failure, task, duration. task должен существовать; duration
+        неотрицательна.
         """
         return self._create("response", row)
 
@@ -99,11 +116,12 @@ class Store:
     def recent_results(self):
         """Вычислить проекцию [Member.ip, Response.duration, Task.tags].
 
-        Перебор начинается с Response: это сохраняемая сторона RIGHT JOIN.
-        Отбор использует строгое >; ровно now-540 не проходит. Затем INNER
-        JOIN с Member исключает строки без задачи или участника. DISTINCT
-        соответствует множественной семантике реляционной проекции.
-        Верхней границы времени в задании нет: будущие ответы тоже проходят.
+        Перебор начинается с Response: это сохраняемая сторона RIGHT
+        JOIN. Отбор использует строгое >; ровно now-540 не проходит.
+        Затем INNER JOIN с Member исключает строки без задачи или
+        участника. DISTINCT соответствует множественной семантике
+        реляционной проекции. Верхней границы времени в задании нет:
+        будущие ответы тоже проходят.
         """
         with self._lock:
             cutoff = self._clock() - WINDOW_SECONDS
@@ -126,5 +144,7 @@ class Store:
         task = self._tables["task"][response[RESPONSE_TASK]]
         member = self._tables["member"][task[TASK_MEMBER]]
         return [
-            member[MEMBER_IP], response[RESPONSE_DURATION], task[TASK_TAGS],
+            member[MEMBER_IP],
+            response[RESPONSE_DURATION],
+            task[TASK_TAGS],
         ]

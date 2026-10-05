@@ -1,0 +1,37 @@
+name: PEP 8 and tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip install --no-deps -e .
+      - name: Strict PEP 8
+        run: |
+          python -m pycodestyle src tests
+          ruff check src tests
+          ruff format --check src tests
+          python tests/audit_project.py
+      - name: Full test suite
+        run: python -m pytest -q
+      - name: Separate model based branch coverage
+        run: |
+          python -m coverage erase
+          python -m coverage run --branch -m pytest tests/test_mbt.py -q
+          python -m coverage report
+          python -m coverage json -o coverage.json
+          python tests/check_mbt_coverage.py coverage.json

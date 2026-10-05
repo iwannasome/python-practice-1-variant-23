@@ -1,8 +1,9 @@
 """Кадрирование TCP по таблице 23: запрос 1+2+4, ответ 1+1+5 байт.
 
 TCP — поток байтов. Один sendall может потребовать нескольких recv.
-Длина описывает байты XML, а не число символов строки. Все числа unsigned,
-порядок big-endian. Лимит 1 MiB защищает память до чтения тела.
+Длина описывает байты XML, а не число символов строки. Все числа
+unsigned, порядок big-endian. Лимит 1 MiB защищает память до чтения
+тела.
 """
 
 VERSION = 1
@@ -18,8 +19,10 @@ def pack_frame(code, body, reply=False):
         raise ValueError("Тело превышает 1 MiB")
     code_size, size_size = (1, 5) if reply else (2, 4)
     return (
-        bytes([VERSION]) + code.to_bytes(code_size, "big")
-        + len(body).to_bytes(size_size, "big") + body
+        bytes([VERSION])
+        + code.to_bytes(code_size, "big")
+        + len(body).to_bytes(size_size, "big")
+        + body
     )
 
 
@@ -35,7 +38,7 @@ def read_exact(sock, size):
 
 
 def receive_frame(sock, reply=False):
-    """Разобрать семь байт заголовка, проверить версию и прочитать тело."""
+    """Прочитать заголовок, проверить версию и получить тело."""
     header = read_exact(sock, HEADER_SIZE)
     if header[0] != VERSION:
         raise ValueError("Неподдерживаемая версия протокола")

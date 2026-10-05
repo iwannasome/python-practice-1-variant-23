@@ -7,12 +7,19 @@ from practice23.repl import run_repl
 
 
 def test_repl_continues_after_errors(monkeypatch, capsys):
-    """Ошибочная команда не должна мешать следующему корректному запросу."""
+    """Ошибочная команда не должна мешать следующему корректному
+    запросу.
+    """
     commands = [
-        "help", "", "[]", "{bad}", '{"method":"missing"}',
+        "help",
+        "",
+        "[]",
+        "{bad}",
+        '{"method":"missing"}',
         '{"method":"get_member","args":[99]}',
         '{"method":"create_member","args":[[1,0,"ip","ru"]]}',
-        '{"method":"get_member","args":[1]}', "quit",
+        '{"method":"get_member","args":[1]}',
+        "quit",
     ]
     monkeypatch.setattr("sys.stdin", StringIO("\n".join(commands)))
     run_repl(Store())
@@ -23,6 +30,6 @@ def test_repl_continues_after_errors(monkeypatch, capsys):
 
 
 def test_repl_exits_at_eof(monkeypatch):
-    """Конец перенаправленного stdin завершает консоль без исключения."""
+    """Завершить консоль по EOF без исключения."""
     monkeypatch.setattr("sys.stdin", StringIO(""))
     run_repl(Store())

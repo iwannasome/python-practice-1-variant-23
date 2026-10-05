@@ -1,4 +1,4 @@
-"""Фикстура поднимает реальный TCP-сервер на свободном порту loopback."""
+"""Фикстура реального TCP-сервера на свободном локальном порту."""
 
 import threading
 
@@ -10,10 +10,13 @@ from practice23.server import RpcServer
 
 @pytest.fixture
 def rpc_server():
-    """Освободить порт и дождаться серверного потока даже при ошибке теста."""
+    """Освободить порт и дождаться серверного потока даже при ошибке
+    теста.
+    """
     with RpcServer(("127.0.0.1", 0), Store(clock=lambda: 1000)) as server:
         thread = threading.Thread(
-            target=server.serve_forever, kwargs={"poll_interval": 0.01},
+            target=server.serve_forever,
+            kwargs={"poll_interval": 0.01},
         )
         thread.start()
         try:

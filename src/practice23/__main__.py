@@ -1,4 +1,6 @@
-"""CLI для локального REPL, TCP-сервера, клиентского REPL и демонстрации."""
+"""CLI для локального REPL, TCP-сервера, клиентского REPL и
+демонстрации.
+"""
 
 import argparse
 import logging
@@ -13,10 +15,11 @@ from .server import RpcServer
 
 
 def run_demo():
-    """Запустить временный сервер и гарантированно освободить его сокет."""
+    """Запустить временный сервер с освобождением сокета."""
     with RpcServer(("127.0.0.1", 0)) as server:
         worker = threading.Thread(
-            target=server.serve_forever, kwargs={"poll_interval": 0.01},
+            target=server.serve_forever,
+            kwargs={"poll_interval": 0.01},
         )
         worker.start()
         try:
@@ -34,7 +37,8 @@ def main():
     parser.add_argument("--port", type=int, default=8023)
     args = parser.parse_args()
     logging.basicConfig(
-        level=logging.INFO, stream=sys.stdout,
+        level=logging.INFO,
+        stream=sys.stdout,
         format="%(levelname)s %(message)s",
     )
     if args.mode == "model":

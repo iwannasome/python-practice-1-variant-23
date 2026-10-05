@@ -2,17 +2,19 @@
 
 import ast
 import io
-from pathlib import Path
 import tokenize
+from pathlib import Path
 
 MAX_LINES = 1000
-MAX_WIDTH = 80
+MAX_WIDTH = 79
 MAX_FUNCTION_LINES = 40
 MAX_ARGUMENTS = 7
 
 
 def audit_file(path):
-    """Проверить размер файла, ширину, функции и отсутствие # комментариев."""
+    """Проверить размер файла, ширину, функции и отсутствие #
+    комментариев.
+    """
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     assert len(lines) <= MAX_LINES, path
@@ -31,12 +33,14 @@ def audit_file(path):
 
 
 def main():
-    """Проверить весь Python-код репозитория, включая автоматические тесты."""
+    """Проверить весь Python-код репозитория, включая автоматические
+    тесты.
+    """
     root = Path(__file__).resolve().parents[1]
     files = sorted(root.glob("src/**/*.py")) + sorted(root.glob("tests/*.py"))
     for path in files:
         audit_file(path)
-    print(f"PASS: {len(files)} файлов; строки <=80; функции <=40;")
+    print(f"PASS: {len(files)} файлов; строки <=79; функции <=40;")
     print("аргументы <=7; обычных комментариев нет; файлы <=1000 строк")
 
 

@@ -1,7 +1,8 @@
 """REPL: одна JSON-команда в строке, результат или понятная ошибка.
 
-JSON здесь — удобный локальный синтаксис консоли. На TCP всегда передаётся
-XML, как требует вариант. Произвольный Python-код не исполняется.
+JSON здесь — удобный локальный синтаксис консоли. На TCP всегда
+передаётся XML, как требует вариант. Произвольный Python-код не
+исполняется.
 """
 
 import json
@@ -10,8 +11,10 @@ from .operations import OPERATIONS, invoke
 
 
 def run_repl(target):
-    """Повторять read-eval-print до quit или EOF, сохраняя объект данных."""
-    print('help — список методов, quit — выход. Формат:')
+    """Повторять read-eval-print до quit или EOF, сохраняя объект
+    данных.
+    """
+    print("help — список методов, quit — выход. Формат:")
     print('{"method":"list_members","args":[]}')
     while True:
         try:
@@ -28,7 +31,7 @@ def run_repl(target):
 
 
 def execute_line(target, line):
-    """Обработать ошибку одной команды, не прерывая интерактивный сеанс."""
+    """Показать ошибку команды и продолжить сеанс."""
     try:
         command = json.loads(line)
         if type(command) is not dict:

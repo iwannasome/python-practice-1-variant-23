@@ -8,9 +8,14 @@ Hypothesis генерирует аргументы и последователь
 import threading
 
 import pytest
-from hypothesis import settings, strategies as st
-from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant
-from hypothesis.stateful import rule
+from hypothesis import settings
+from hypothesis import strategies as st
+from hypothesis.stateful import (
+    RuleBasedStateMachine,
+    initialize,
+    invariant,
+    rule,
+)
 
 from practice23.client import RpcClient, RpcError
 from practice23.model import Store
@@ -26,12 +31,13 @@ class RpcMachine(RuleBasedStateMachine):
     """Два состояния получают одни действия: RPC и простой эталон."""
 
     def __init__(self):
-        """Для каждого примера поднять новый пустой сервер и новые часы."""
+        """Создать пустой сервер и часы для нового примера."""
         super().__init__()
         self.now = 1000
         self.expected = {name: {} for name in PLURALS}
         self.server = RpcServer(
-            ("127.0.0.1", 0), Store(clock=lambda: self.now),
+            ("127.0.0.1", 0),
+            Store(clock=lambda: self.now),
         )
         self.worker = threading.Thread(
             target=self.server.serve_forever,
@@ -41,14 +47,16 @@ class RpcMachine(RuleBasedStateMachine):
         self.client = RpcClient(*self.server.server_address)
 
     def teardown(self):
-        """Закрыть сервер даже после найденного Hypothesis контрпримера."""
+        """Закрыть сервер, в том числе после контрпримера."""
         self.server.shutdown()
         self.worker.join()
         self.server.server_close()
         super().teardown()
 
     def create(self, entity, row, valid=True):
-        """Независимо решить, разрешена ли вставка, и сверить её результат."""
+        """Независимо решить, разрешена ли вставка, и сверить её
+        результат.
+        """
         table = self.expected[entity]
         accepted = valid and row[0] not in table
         method = getattr(self.client, f"create_{entity}")
@@ -60,11 +68,14 @@ class RpcMachine(RuleBasedStateMachine):
         table[row[0]] = row.copy()
 
     @initialize(
-        ip=TEXT, tags=TEXT, duration=st.integers(0, 100),
+        ip=TEXT,
+        tags=TEXT,
+        duration=st.integers(0, 100),
         invalid_duration=st.integers(-100, -1),
     )
     def seed_relations(self, ip, tags, duration, invalid_duration):
-        """Генерируемая начальная цепочка обеспечивает вызов всех 10 методов.
+        """Генерируемая начальная цепочка обеспечивает вызов всех 10
+        методов.
 
         Два свежих ответа имеют одну проекцию; ещё один лежит точно на
         границе. Поэтому тест ловит потерю DISTINCT и ошибочное >=.
@@ -77,9 +88,17 @@ class RpcMachine(RuleBasedStateMachine):
         invalid = [4, self.now, "", "ok", "", 1, invalid_duration]
         self.create("response", invalid, valid=False)
 
+    @initialize(bad_datetime=TEXT)
+    def reject_wrong_type(self, bad_datetime):
+        """Строка вместо целого времени отклоняется в любом сценарии."""
+        row = [999, bad_datetime, "ip", "ru"]
+        self.create("member", row, valid=False)
+
     @rule(uid=UIDS, ip=TEXT, locale=TEXT)
     def add_member(self, uid, ip, locale):
-        """Проверить уникальные ключи и дубликаты на произвольных строках."""
+        """Проверить уникальные ключи и дубликаты на произвольных
+        строках.
+        """
         self.create("member", [uid, self.now, ip, locale])
 
     @rule(uid=UIDS, parent=UIDS, text=TEXT, tags=TEXT)
@@ -97,7 +116,7 @@ class RpcMachine(RuleBasedStateMachine):
 
     @rule(entity=st.sampled_from(tuple(PLURALS)), uid=UIDS)
     def read_one(self, entity, uid):
-        """Сверить чтение существующего и отсутствующего идентификатора."""
+        """Проверить чтение существующего и отсутствующего ключа."""
         method = getattr(self.client, f"get_{entity}")
         if uid in self.expected[entity]:
             assert method(uid) == self.expected[entity][uid]
@@ -107,22 +126,43 @@ class RpcMachine(RuleBasedStateMachine):
 
     @rule(seconds=st.integers(0, 600))
     def advance_time(self, seconds):
-        """Сдвинуть часы: сохранённые ответы должны постепенно устаревать."""
+        """Сдвинуть часы: сохранённые ответы должны постепенно
+        устаревать.
+        """
         self.now += seconds
 
-    @rule(entity=st.sampled_from(tuple(PLURALS)), bad=st.sampled_from([
-        [], [0], "not-a-list", [1, "bad", "ip", "ru"],
-    ]))
+    @rule(
+        entity=st.sampled_from(tuple(PLURALS)),
+        bad=st.sampled_from(
+            [
+                [],
+                [0],
+                "not-a-list",
+                [1, "bad", "ip", "ru"],
+            ]
+        ),
+    )
     def malformed_record(self, entity, bad):
         """Неверная длина или тип записи не должны менять состояние."""
         with pytest.raises(RpcError):
             getattr(self.client, f"create_{entity}")(bad)
 
-    @rule(entity=st.sampled_from(tuple(PLURALS)), uid=st.sampled_from([
-        0, -1, "1", [], 999,
-    ]))
+    @rule(
+        entity=st.sampled_from(tuple(PLURALS)),
+        uid=st.sampled_from(
+            [
+                0,
+                -1,
+                "1",
+                [],
+                999,
+            ]
+        ),
+    )
     def invalid_lookup(self, entity, uid):
-        """Невалидный или отсутствующий ключ даёт контролируемую RPC-ошибку."""
+        """Невалидный или отсутствующий ключ даёт контролируемую
+        RPC-ошибку.
+        """
         with pytest.raises(RpcError):
             getattr(self.client, f"get_{entity}")(uid)
 
@@ -138,13 +178,16 @@ class RpcMachine(RuleBasedStateMachine):
 
     @invariant()
     def projection_matches(self):
-        """Эталон — декартово произведение с условиями, без индексов Store."""
+        """Эталон — декартово произведение с условиями, без индексов
+        Store.
+        """
         expected = {
             (member[2], response[6], task[4])
             for member in self.expected["member"].values()
             for task in self.expected["task"].values()
             for response in self.expected["response"].values()
-            if member[0] == task[3] and task[0] == response[5]
+            if member[0] == task[3]
+            and task[0] == response[5]
             and response[1] > self.now - 540
         }
         actual = self.client.recent_results()
@@ -153,6 +196,9 @@ class RpcMachine(RuleBasedStateMachine):
 
 TestRpcMachine = RpcMachine.TestCase
 TestRpcMachine.settings = settings(
-    max_examples=40, stateful_step_count=35, deadline=None,
-    derandomize=True, database=None,
+    max_examples=40,
+    stateful_step_count=35,
+    deadline=None,
+    derandomize=True,
+    database=None,
 )

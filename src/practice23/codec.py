@@ -1,17 +1,17 @@
 """Типизированное XML-тело: int, str и вложенные list.
 
 Строка хранится в base64 от UTF-8: XML 1.0 не допускает NUL и некоторые
-управляющие символы, а XML-парсер нормализует CR. base64 сохраняет данные
-без потерь. surrogatepass также сохраняет одиночные суррогаты Python str.
-Внешние сущности и DTD запрещены парсером defusedxml.
+управляющие символы, а XML-парсер нормализует CR. base64 сохраняет
+данные без потерь. surrogatepass также сохраняет одиночные суррогаты
+Python str. Внешние сущности и DTD запрещены парсером defusedxml.
 """
 
 import base64
 import binascii
 from xml.etree import ElementTree as ET
 
-from defusedxml.ElementTree import fromstring
 from defusedxml.common import DefusedXmlException
+from defusedxml.ElementTree import fromstring
 
 MAX_DEPTH = 32
 
@@ -42,7 +42,7 @@ def encode(value):
 
 
 def _value(node, depth=0):
-    """Разобрать только допустимую грамматику, не игнорируя лишние поля."""
+    """Проверить грамматику XML и отсутствие лишних полей."""
     if depth > MAX_DEPTH or node.attrib or (node.tail or "").strip():
         raise ValueError("Недопустимая структура XML")
     if node.tag == "list":
@@ -64,6 +64,11 @@ def decode(body):
     try:
         node = fromstring(body, forbid_dtd=True)
         return _value(node)
-    except (ET.ParseError, DefusedXmlException, binascii.Error,
-            UnicodeError, RecursionError) as error:
+    except (
+        ET.ParseError,
+        DefusedXmlException,
+        binascii.Error,
+        UnicodeError,
+        RecursionError,
+    ) as error:
         raise ValueError("Некорректное XML-тело") from error

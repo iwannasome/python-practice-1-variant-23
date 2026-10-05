@@ -11,7 +11,7 @@ from practice23.protocol import pack_frame, receive_frame
 
 
 def test_all_ten_methods(rpc_server):
-    """Проверить целый цикл создания и чтения трёх сущностей и выборки."""
+    """Проверить создание, чтение трёх сущностей и выборку."""
     client = RpcClient(*rpc_server.server_address)
     member = [1, 900, "::1", "ru"]
     task = [1, 900, "<&>", 1, "tag", 0, 1]
@@ -31,7 +31,9 @@ def test_all_ten_methods(rpc_server):
 
 
 def test_unknown_operation_and_server_survival(rpc_server):
-    """Код 65535 нельзя обрезать до байта: ошибка возвращается с кодом 0."""
+    """Код 65535 нельзя обрезать до байта: ошибка возвращается с кодом
+    0.
+    """
     with socket.create_connection(rpc_server.server_address) as sock:
         sock.sendall(pack_frame(65535, encode([])))
         code, body = receive_frame(sock, reply=True)
@@ -43,6 +45,7 @@ def test_unknown_operation_and_server_survival(rpc_server):
 def test_concurrent_duplicate_is_atomic(rpc_server):
     """Два клиента не могут успешно создать один и тот же ключ."""
     client = RpcClient(*rpc_server.server_address)
+
     def create():
         """Вернуть наблюдаемый результат конкурентного создания."""
         try:
@@ -50,6 +53,7 @@ def test_concurrent_duplicate_is_atomic(rpc_server):
             return "ok"
         except RpcError:
             return "error"
+
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(lambda _: create(), range(2)))
     assert sorted(outcomes) == ["error", "ok"]
