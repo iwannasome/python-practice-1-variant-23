@@ -38,7 +38,7 @@ def check_file(filename, data):
         body = set(range(method.lineno + 1, method.end_lineno + 1))
         assert executed & body, (filename, method.name, "не вызывался")
         assert not missing & body, (filename, method.name, "пропущены строки")
-        print(f"PASS {Path(filename).name}:{method.name}")
+        print(f"PASS {Path(filename).name}: {method.name}")
 
 
 def main():

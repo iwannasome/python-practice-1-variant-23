@@ -8,7 +8,7 @@ Python str. Внешние сущности и DTD запрещены парсе
 
 import base64
 import binascii
-from xml.etree import ElementTree as ET
+from xml.etree.ElementTree import Element, ParseError, tostring
 
 from defusedxml.common import DefusedXmlException
 from defusedxml.ElementTree import fromstring
@@ -21,15 +21,15 @@ def _element(value, depth=0):
     if depth > MAX_DEPTH:
         raise ValueError("Слишком большая вложенность XML")
     if type(value) is list:
-        node = ET.Element("list")
+        node = Element("list")
         node.extend(_element(item, depth + 1) for item in value)
         return node
     if type(value) is int:
-        node = ET.Element("int")
+        node = Element("int")
         node.text = str(value)
         return node
     if type(value) is str:
-        node = ET.Element("str")
+        node = Element("str")
         raw = value.encode("utf-8", errors="surrogatepass")
         node.text = base64.b64encode(raw).decode("ascii")
         return node
@@ -38,7 +38,7 @@ def _element(value, depth=0):
 
 def encode(value):
     """Сериализовать значение в XML UTF-8 с декларацией кодировки."""
-    return ET.tostring(_element(value), encoding="utf-8", xml_declaration=True)
+    return tostring(_element(value), encoding="utf-8", xml_declaration=True)
 
 
 def _value(node, depth=0):
@@ -49,6 +49,11 @@ def _value(node, depth=0):
         if (node.text or "").strip():
             raise ValueError("В list допустимы только дочерние элементы")
         return [_value(child, depth + 1) for child in node]
+    return _scalar_value(node)
+
+
+def _scalar_value(node):
+    """Восстановить int или str без дочерних элементов."""
     if len(node):
         raise ValueError("Скалярный элемент не может содержать элементы")
     if node.tag == "int":
@@ -65,7 +70,7 @@ def decode(body):
         node = fromstring(body, forbid_dtd=True)
         return _value(node)
     except (
-        ET.ParseError,
+        ParseError,
         DefusedXmlException,
         binascii.Error,
         UnicodeError,

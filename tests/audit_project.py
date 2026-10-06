@@ -18,6 +18,25 @@ def is_number_literal(node):
     return isinstance(node, ast.Constant) and type(node.value) in (int, float)
 
 
+def audit_comparison(node, path):
+    """Проверить отсутствие числовых литералов в сравнении."""
+    operands = [node.left, *node.comparators]
+    assert not any(map(is_number_literal, operands)), (
+        path,
+        node.lineno,
+        "Числовой литерал в сравнении",
+    )
+
+
+def audit_function(node, path):
+    """Проверить длину функции и количество её аргументов."""
+    length = node.end_lineno - node.lineno + 1
+    assert length <= MAX_FUNCTION_LINES, (path, node.name, length)
+    args = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+    count = len(args) - bool(args and args[0].arg in {"self", "cls"})
+    assert count <= MAX_ARGUMENTS, (path, node.name, count)
+
+
 def audit_file(path):
     """Проверить размер файла, ширину, функции и отсутствие #
     комментариев.
@@ -30,20 +49,9 @@ def audit_file(path):
     assert not any(token.type == tokenize.COMMENT for token in tokens), path
     for node in ast.walk(ast.parse(text)):
         if isinstance(node, ast.Compare):
-            operands = [node.left, *node.comparators]
-            assert not any(map(is_number_literal, operands)), (
-                path,
-                node.lineno,
-                "Числовой литерал в сравнении",
-            )
+            audit_comparison(node, path)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            length = node.end_lineno - node.lineno + 1
-            assert length <= MAX_FUNCTION_LINES, (path, node.name, length)
-            args = (
-                node.args.posonlyargs + node.args.args + node.args.kwonlyargs
-            )
-            count = len(args) - bool(args and args[0].arg in {"self", "cls"})
-            assert count <= MAX_ARGUMENTS, (path, node.name, count)
+            audit_function(node, path)
 
 
 def main():
@@ -54,8 +62,8 @@ def main():
     files = sorted(root.glob("src/**/*.py")) + sorted(root.glob("tests/*.py"))
     for path in files:
         audit_file(path)
-    print(f"PASS: {len(files)} файлов; строки <=79; функции <=40;")
-    print("аргументы <=7; обычных комментариев нет; файлы <=1000 строк")
+    print(f"PASS: {len(files)} файлов, строки <=79, функции <=40")
+    print("аргументы <=7, обычных комментариев нет, файлы <=1000 строк")
     print("PASS: нет числовых литералов в операндах сравнений")
 
 

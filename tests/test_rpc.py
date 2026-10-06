@@ -13,24 +13,37 @@ EXPECTED_ERROR_CODE = 0
 EXPECTED_UNIQUE_MEMBERS = 1
 
 
-def test_all_ten_methods(rpc_server):
-    """Проверить создание, чтение трёх сущностей и выборку."""
+def test_member_methods_and_duplicate(rpc_server):
+    """Проверить создание и чтение участника, отказ при дубликате."""
     client = RpcClient(*rpc_server.server_address)
     member = [1, 900, "::1", "ru"]
-    task = [1, 900, "<&>", 1, "tag", 0, 1]
-    response = [1, 999, "ok", "ok", "", 1, 15]
     assert client.create_member(member) == member
     assert client.list_members() == [member]
     assert client.get_member(1) == member
+    with pytest.raises(RpcError):
+        client.create_member(member)
+
+
+def test_task_methods(rpc_server):
+    """Проверить создание и чтение задания участника."""
+    client = RpcClient(*rpc_server.server_address)
+    client.create_member([1, 900, "::1", "ru"])
+    task = [1, 900, "<&>", 1, "tag", 0, 1]
     assert client.create_task(task) == task
     assert client.list_tasks() == [task]
     assert client.get_task(1) == task
+
+
+def test_response_methods_and_recent_results(rpc_server):
+    """Проверить создание и чтение ответа, выборку результатов."""
+    client = RpcClient(*rpc_server.server_address)
+    client.create_member([1, 900, "::1", "ru"])
+    client.create_task([1, 900, "<&>", 1, "tag", 0, 1])
+    response = [1, 999, "ok", "ok", "", 1, 15]
     assert client.create_response(response) == response
     assert client.list_responses() == [response]
     assert client.get_response(1) == response
     assert client.recent_results() == [["::1", 15, "tag"]]
-    with pytest.raises(RpcError):
-        client.create_member(member)
 
 
 def test_unknown_operation_and_server_survival(rpc_server):
